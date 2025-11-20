@@ -22,12 +22,28 @@ require(htmlwidgets)
 
 ```{r}
 mab = st_read('Data/spatial/tanga_pemba_biosphere_extent.gpkg')
+mab  = mab  |> 
+    mutate(area_m = st_area(geometry),
+           area_km = as.numeric(area_m) / 1e6,
+           area_ha = area_km * 100        
+) 
+
+
 cfmas = st_read('Data/spatial/cfmas.gpkg') |> 
     # st_make_valid() |> 
     st_sf()
 islands = st_read('Data/spatial/baseline/islands.gpkg') |> 
     st_make_valid()
 aoi = st_read('Data/spatial/tanga_pemba_biosphere_extent.gpkg')
+
+aoi =aoi |> 
+    st_transform(32737) |> 
+    mutate(area_m = st_area(geometry),
+           area_km = as.numeric(area_m) / 1e6,
+           area_ha = area_km * 100        
+    ) |> 
+    st_transform(4326)
+
 
 islands_aoi = islands |> 
     st_intersection(aoi)
@@ -59,16 +75,23 @@ zones = islands_aoi  |>
 
 ```{r}
 
-leaflet() |> 
+tape = leaflet() |> 
     setView(lng = 39.5, lat = -5.2, zoom = 10) |>
     addProviderTiles(providers$Esri.WorldImagery, group = "ESRI Imagery") |>
     addProviderTiles(providers$Esri.OceanBasemap, group = "Ocean Basemap") |>
     addProviderTiles(providers$OpenTopoMap, group = "Topographic") |>
     addTiles(group = "OpenStreetMap") |>
     addPolygons(data = mab, group = 'TAPE',
-                fillColor = 'transparent', color = 'black', 
+                fillColor = 'blue', color = 'black', 
                 weight = 2,     
-                fillOpacity = 0.5, opacity = 1
+                fillOpacity = 0.1, opacity = 1, 
+                label = ~htmltools::htmlEscape(name), 
+                popup = ~paste0("<strong>Name: </strong>", name, 
+                                # "<br><strong>Class: </strong>", class,
+                                "<br><strong>Area (ha): </strong>", scales::comma(area_ha),
+                                "<br><strong>Area (km): </strong>",  scales::comma(area_km)
+                            ),
+                labelOptions = labelOptions(noHide = F, direction = 'auto')
             ) |>
     addPolygons(data = mma, group = 'MPA/MCA',
                 fillColor = 'green', color = 'darkgreen', 
@@ -120,6 +143,11 @@ leaflet() |>
         opacity = 1
     ) |> 
     addScaleBar(position = "bottomleft") 
+
+
+tape
+# tape |> 
+#     htmlwidgets::saveWidget(file = 'index.html')
 
 
 ``` 
