@@ -81,7 +81,7 @@ tape = leaflet() |>
     addProviderTiles(providers$Esri.OceanBasemap, group = "Ocean Basemap") |>
     addProviderTiles(providers$OpenTopoMap, group = "Topographic") |>
     addTiles(group = "OpenStreetMap") |>
-    addPolygons(data = mab, group = 'TAPE',
+    addPolygons(data = mab, group = 'Hifadhi Hai',
                 fillColor = 'blue', color = 'black', 
                 weight = 2,     
                 fillOpacity = 0.1, opacity = 1, 
@@ -94,7 +94,7 @@ tape = leaflet() |>
                 labelOptions = labelOptions(noHide = F, direction = 'auto')
             ) |>
     addPolygons(data = mma, group = 'MPA/MCA',
-                fillColor = 'green', color = 'darkgreen', 
+                fillColor = 'blue', color = 'blue', 
                 weight = 2,     
                 fillOpacity = 0.5, opacity = 1, 
                 label = ~htmltools::htmlEscape(name), 
@@ -103,14 +103,14 @@ tape = leaflet() |>
                                 "<br><strong>Area (ha): </strong>", round(mma_area_h, 2)),
                 labelOptions = labelOptions(noHide = F, direction = 'auto')
             ) |>
-    addPolygons(data = cfmas, group = 'Transition',
+    addPolygons(data = cfmas, group = 'Eneo Mpito',
                 fillColor = 'red', color = 'red', # Fill and stroke color
                 weight = 2,      # Stroke width
                 fillOpacity = 0.5, opacity = 1, 
                 label = ~htmltools::htmlEscape(name)
             ) |>
-    addPolygons(data = islands_aoi, group = 'Core',
-                fillColor = 'blue', color = 'blue',
+    addPolygons(data = islands_aoi, group = 'Eneo Msingi',
+                fillColor = 'darkgreen', color = 'darkgreen',
                 weight = 2, fillOpacity = 0.5, opacity = 1, 
                 label = ~htmltools::htmlEscape(name), 
                 popup = ~paste0("<strong>Name: </strong>", name, 
@@ -118,20 +118,28 @@ tape = leaflet() |>
                                 "<br><strong>Area (ha): </strong>", round(area_ha, 2)),
                 labelOptions = labelOptions(noHide = F, direction = 'auto')
             ) |>
-    addPolygons(data = zones, group = '2000m Buffer',
+    addPolygons(data = zones, group = 'Eneo Kinga',
                 fillColor = 'yellow', color = 'orange',
                 weight = 2, fillOpacity = 0.5, opacity = 1
             ) |>
     addLayersControl(
         baseGroups = c("OpenStreetMap", "ESRI Imagery", "Ocean Basemap", "Topographic"),
-        overlayGroups = c('TAPE', 'MPA/MCA','Transition', '2000m Buffer', 'Core'),
+        # overlayGroups = c('Eneo Msingi', 'Eneo Kinga', 'Eneo Mpito', 'Hifadhi Hai', 'MPA/MCA', 'Drawn Items', 'Graticule'),
+        position = "bottomright",
         options = layersControlOptions(collapsed = FALSE)
     ) |>
+    addLayersControl(
+        # baseGroups = c("OpenStreetMap", "ESRI Imagery", "Ocean Basemap", "Topographic"),
+        overlayGroups = c('Eneo Msingi', 'Eneo Kinga', 'Eneo Mpito', 'Hifadhi Hai', 'MPA/MCA', 'Drawn Items', 'Graticule'),
+        position = "topright",
+        options = layersControlOptions(collapsed = FALSE)
+    ) |>  
+        hideGroup(group = c('Hifadhi Hai', 'MPA/MCA', 'Drawn Items', 'Graticule'))|>
     # Legend for the filled polygons
     addLegend(
         position = "bottomright",
         colors = c("blue", "yellow", "red", "green"),
-        labels = c("Core", "2000m Buffer", "Transition", "MPA/MCA"),
+        labels = c("Eneo Kinga", "Eneo Mpito","Eneo Msingi",  "MPA/MCA"),
         title = "Legend",
         opacity = 1
     ) |>
@@ -141,8 +149,34 @@ tape = leaflet() |>
         colors = "black",
         labels = "TAPE Biosphere Extent",
         opacity = 1
+    ) |>
+    addMiniMap(
+        # tiles = providers$Esri.OceanBasemap,
+        toggleDisplay = TRUE, 
+        position = 'bottomleft',
+        minimized = FALSE
+    ) |>
+    addScaleBar(position = "bottomleft") |> 
+    addFullscreenControl() |> 
+    addDrawToolbar(
+        targetGroup = 'Drawn Items',
+        editOptions = editToolbarOptions(
+            selectedPathOptions = selectedPathOptions()
+        ),
+        polylineOptions = FALSE, circleOptions = FALSE, rectangleOptions = TRUE, markerOptions = TRUE, circleMarkerOptions = FALSE
     ) |> 
-    addScaleBar(position = "bottomleft") 
+    addMeasure(
+        position = "topleft",
+        primaryLengthUnit = "meters", secondaryLengthUnit = "kilometers",
+        primaryAreaUnit = "square meters", secondaryAreaUnit = "hectares",
+        activeColor = "#3D535D",
+        completedColor = "#7D4479") |> 
+    addGraticule(
+        interval = 0.2,
+        style = list(color = "#333", weight = 0.8, opacity = 0.5),
+        group = "Graticule",
+        options = pathOptions(pointerEvents = "none", clickable = FALSE)
+    ) 
 
 
 tape
@@ -151,3 +185,8 @@ tape
 
 
 ``` 
+
+
+```{r}
+
+```
