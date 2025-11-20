@@ -1,0 +1,125 @@
+---
+title: "Untitled"
+format: html
+---
+
+# Introduction
+```{r}
+require(tidyverse)
+require(terra)
+require(tidyterra)
+require(ggspatial)
+require(magrittr)
+require(sf)
+require(leaflet)
+require(leaflet.extras)
+require(htmlwidgets)
+```
+
+
+# Method
+## Layers
+
+```{r}
+mab = st_read('Data/spatial/tanga_pemba_biosphere_extent.gpkg')
+cfmas = st_read('Data/spatial/cfmas.gpkg') |> 
+    # st_make_valid() |> 
+    st_sf()
+islands = st_read('Data/spatial/baseline/islands.gpkg') |> 
+    st_make_valid()
+aoi = st_read('Data/spatial/tanga_pemba_biosphere_extent.gpkg')
+
+islands_aoi = islands |> 
+    st_intersection(aoi)
+
+mma = st_read('Data/spatial/mma.gpkg') |> janitor::clean_names()
+```
+
+
+```{r}
+islands_aoi = islands_aoi |> 
+    select(name = NAME) |> 
+    mutate(area_m = st_area(geom),
+           area_km = as.numeric(area_m) / 1e6,
+           area_ha = area_km * 100        
+    ) |> 
+    select(-area_m) |> 
+    filter(!name == 'Pemba Island') 
+
+zones = islands_aoi  |> 
+    st_transform(32737) |> 
+    st_buffer(dist = c(2000)) |> 
+    st_union() |> 
+    st_sf() |> 
+    st_transform(4326)
+
+
+```
+
+
+```{r}
+
+leaflet() |> 
+    setView(lng = 39.5, lat = -5.2, zoom = 10) |>
+    addProviderTiles(providers$Esri.WorldImagery, group = "ESRI Imagery") |>
+    addProviderTiles(providers$Esri.OceanBasemap, group = "Ocean Basemap") |>
+    addProviderTiles(providers$OpenTopoMap, group = "Topographic") |>
+    addTiles(group = "OpenStreetMap") |>
+    addPolygons(data = mab, group = 'TAPE',
+                fillColor = 'transparent', color = 'black', 
+                weight = 2,     
+                fillOpacity = 0.5, opacity = 1
+            ) |>
+    addPolygons(data = mma, group = 'MPA/MCA',
+                fillColor = 'green', color = 'darkgreen', 
+                weight = 2,     
+                fillOpacity = 0.5, opacity = 1, 
+                label = ~htmltools::htmlEscape(name), 
+                popup = ~paste0("<strong>Name: </strong>", name, 
+                                "<br><strong>Class: </strong>", class,
+                                "<br><strong>Area (ha): </strong>", round(mma_area_h, 2)),
+                labelOptions = labelOptions(noHide = F, direction = 'auto')
+            ) |>
+    addPolygons(data = cfmas, group = 'Transition',
+                fillColor = 'red', color = 'red', # Fill and stroke color
+                weight = 2,      # Stroke width
+                fillOpacity = 0.5, opacity = 1, 
+                label = ~htmltools::htmlEscape(name)
+            ) |>
+    addPolygons(data = islands_aoi, group = 'Core',
+                fillColor = 'blue', color = 'blue',
+                weight = 2, fillOpacity = 0.5, opacity = 1, 
+                label = ~htmltools::htmlEscape(name), 
+                popup = ~paste0("<strong>Name: </strong>", name, 
+                                # "<br><strong>Class: </strong>", class,
+                                "<br><strong>Area (ha): </strong>", round(area_ha, 2)),
+                labelOptions = labelOptions(noHide = F, direction = 'auto')
+            ) |>
+    addPolygons(data = zones, group = '2000m Buffer',
+                fillColor = 'yellow', color = 'orange',
+                weight = 2, fillOpacity = 0.5, opacity = 1
+            ) |>
+    addLayersControl(
+        baseGroups = c("OpenStreetMap", "ESRI Imagery", "Ocean Basemap", "Topographic"),
+        overlayGroups = c('TAPE', 'MPA/MCA','Transition', '2000m Buffer', 'Core'),
+        options = layersControlOptions(collapsed = FALSE)
+    ) |>
+    # Legend for the filled polygons
+    addLegend(
+        position = "bottomright",
+        colors = c("blue", "yellow", "red", "green"),
+        labels = c("Core", "2000m Buffer", "Transition", "MPA/MCA"),
+        title = "Legend",
+        opacity = 1
+    ) |>
+    # Add a separate legend for the TAPE outline
+    addLegend(
+        position = "bottomright",
+        colors = "black",
+        labels = "TAPE Biosphere Extent",
+        opacity = 1
+    ) |> 
+    addScaleBar(position = "bottomleft") 
+
+
+``` 
