@@ -60,6 +60,21 @@ islands_aoi = islands |>
     st_intersection(aoi)
 
 mma = st_read('Data/spatial/mma.gpkg') |> janitor::clean_names()
+
+shehia = st_read('Data/spatial/pemba/Shehia_Alomg_the_TAPE_hp.shp') |> 
+    janitor::clean_names() |> 
+    st_transform(4326) |> 
+    select(name = ward_name)
+
+mangroves_mainland = st_read('Data/spatial/mangrove_mainland.gpkg') |> mutate(area="Mainland") |> select(area)
+mangroves_pemba = st_read('Data/spatial/mangrove_pemba.gpkg') |> mutate(area="Pemba") |> select(area)
+
+mangroves = rbind(mangroves_mainland, mangroves_pemba)
+
+mangroves = mangroves |> 
+    st_make_valid() |> 
+    st_intersection(aoi)
+
 ```
 
 
@@ -92,6 +107,14 @@ tape = leaflet() |>
     addProviderTiles(providers$Esri.OceanBasemap, group = "Ocean Basemap") |>
     addProviderTiles(providers$OpenTopoMap, group = "Topographic") |>
     addTiles(group = "OpenStreetMap") |>
+    addPolygons(data = shehia, group = 'Shehia',
+                fill = TRUE, color = 'black',
+                weight = 1, fillOpacity = .1, opacity = 1, label = ~name,
+            )|>
+    addPolygons(data = mangroves, group = 'Mangrove',
+                fill = TRUE, color = 'transparent', fillColor = 'darkgreen',
+                weight = 0, fillOpacity = .6, opacity = 1
+            ) |>
     addPolygons(data = mab, group = 'Hifadhi Hai',
                 fillColor = 'blue', color = 'black', 
                 weight = 2,     
@@ -147,11 +170,11 @@ tape = leaflet() |>
     # ) |>
     addLayersControl(
         baseGroups = c("OpenStreetMap", "ESRI Imagery", "Ocean Basemap", "Topographic"),
-        overlayGroups = c('Eneo Msingi', 'Eneo Kinga', 'Eneo Mpito', 'Hifadhi Hai', 'MPA/MCA', 'Drawn Items', 'Graticule'),
+        overlayGroups = c('Eneo Msingi', 'Eneo Kinga', 'Eneo Mpito', 'Hifadhi Hai','Shehia', 'Mangrove', 'MPA/MCA', 'Drawn Items', 'Graticule'),
         position = "topright",
         options = layersControlOptions(collapsed = FALSE)
     ) |>  
-        hideGroup(group = c('Hifadhi Hai', 'MPA/MCA', 'Drawn Items', 'Graticule'))|>
+        hideGroup(group = c('Shehia', 'Hifadhi Hai', 'Mangrove', 'MPA/MCA', 'Drawn Items', 'Graticule'))|>
     # Legend for the filled polygons
     addLegend(
         position = "bottomright",
@@ -161,12 +184,12 @@ tape = leaflet() |>
         opacity = 1
     ) |>
     # Add a separate legend for the TAPE outline
-    addLegend(
-        position = "bottomright",
-        colors = "black",
-        labels = "TAPE Biosphere Extent",
-        opacity = 1
-    ) |>
+    # addLegend(
+    #     position = "bottomright",
+    #     colors = "black",
+    #     labels = "TAPE Biosphere Extent",
+    #     opacity = 1
+    # ) |>
     addMiniMap(
         # tiles = providers$Esri.OceanBasemap,
         toggleDisplay = TRUE, 

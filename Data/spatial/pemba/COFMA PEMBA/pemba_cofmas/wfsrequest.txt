@@ -1,0 +1,1 @@
+http://zansdi.environment.fi:8080/geoserver/wfs?format_options=charset%3AUTF-8&typename=cite%3Acofmas_pemba&outputFormat=SHAPE-ZIP&version=1.0.0&service=WFS&request=GetFeature
