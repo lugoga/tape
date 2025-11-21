@@ -29,14 +29,25 @@ mab  = mab  |>
 ) 
 
 
-cfmas = st_read('Data/spatial/cfmas.gpkg') |> 
+cfmas = st_read('Data/spatial/cfmas_mainland_pemba.gpkg') |> 
     # st_make_valid() |> 
-    st_sf()
-islands = st_read('Data/spatial/baseline/islands.gpkg') |> 
-    st_make_valid()
-aoi = st_read('Data/spatial/tanga_pemba_biosphere_extent.gpkg')
+    st_sf()|> 
+    st_transform(32737) |> 
+    mutate(area_m = st_area(geom),
+           area_km = as.numeric(area_m) / 1e6,
+           area_ha = area_km * 100        
+    ) |> 
+    st_transform(4326)
 
-aoi =aoi |> 
+
+
+islands = st_read('Data/spatial/islands.gpkg') |> 
+    st_make_valid()
+
+aoi = st_read('Data/spatial/tanga_pemba_biosphere_extent.gpkg')|> 
+    st_make_valid()
+
+aoi = aoi |> 
     st_transform(32737) |> 
     mutate(area_m = st_area(geometry),
            area_km = as.numeric(area_m) / 1e6,
@@ -106,8 +117,14 @@ tape = leaflet() |>
     addPolygons(data = cfmas, group = 'Eneo Mpito',
                 fillColor = 'red', color = 'red', # Fill and stroke color
                 weight = 2,      # Stroke width
-                fillOpacity = 0.5, opacity = 1, 
-                label = ~htmltools::htmlEscape(name)
+                fillOpacity = 0.2, opacity = 1, 
+                label = ~htmltools::htmlEscape(name), 
+                popup = ~paste0("<strong>Name: </strong>", name, 
+                                # "<br><strong>Class: </strong>", class,
+                                "<br><strong>Area (ha): </strong>", scales::comma(area_ha),
+                                "<br><strong>Area (km): </strong>",  scales::comma(area_km)
+                            ),
+                labelOptions = labelOptions(noHide = F, direction = 'auto')
             ) |>
     addPolygons(data = islands_aoi, group = 'Eneo Msingi',
                 fillColor = 'darkgreen', color = 'darkgreen',
@@ -122,14 +139,14 @@ tape = leaflet() |>
                 fillColor = 'yellow', color = 'orange',
                 weight = 2, fillOpacity = 0.5, opacity = 1
             ) |>
+    # addLayersControl(
+    #     baseGroups = c("OpenStreetMap", "ESRI Imagery", "Ocean Basemap", "Topographic"),
+    #     # overlayGroups = c('Eneo Msingi', 'Eneo Kinga', 'Eneo Mpito', 'Hifadhi Hai', 'MPA/MCA', 'Drawn Items', 'Graticule'),
+    #     position = "bottomright",
+    #     options = layersControlOptions(collapsed = FALSE)
+    # ) |>
     addLayersControl(
         baseGroups = c("OpenStreetMap", "ESRI Imagery", "Ocean Basemap", "Topographic"),
-        # overlayGroups = c('Eneo Msingi', 'Eneo Kinga', 'Eneo Mpito', 'Hifadhi Hai', 'MPA/MCA', 'Drawn Items', 'Graticule'),
-        position = "bottomright",
-        options = layersControlOptions(collapsed = FALSE)
-    ) |>
-    addLayersControl(
-        # baseGroups = c("OpenStreetMap", "ESRI Imagery", "Ocean Basemap", "Topographic"),
         overlayGroups = c('Eneo Msingi', 'Eneo Kinga', 'Eneo Mpito', 'Hifadhi Hai', 'MPA/MCA', 'Drawn Items', 'Graticule'),
         position = "topright",
         options = layersControlOptions(collapsed = FALSE)
@@ -168,7 +185,7 @@ tape = leaflet() |>
     addMeasure(
         position = "topleft",
         primaryLengthUnit = "meters", secondaryLengthUnit = "kilometers",
-        primaryAreaUnit = "square meters", secondaryAreaUnit = "hectares",
+        primaryAreaUnit = "sqmeters", secondaryAreaUnit = "hectares",
         activeColor = "#3D535D",
         completedColor = "#7D4479") |> 
     addGraticule(
@@ -176,7 +193,7 @@ tape = leaflet() |>
         style = list(color = "#333", weight = 0.8, opacity = 0.5),
         group = "Graticule",
         options = pathOptions(pointerEvents = "none", clickable = FALSE)
-    ) 
+    )  
 
 
 tape
