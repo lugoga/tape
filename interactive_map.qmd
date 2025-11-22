@@ -66,6 +66,11 @@ shehia = st_read('Data/spatial/pemba/Shehia_Alomg_the_TAPE_hp.shp') |>
     st_transform(4326) |> 
     select(name = ward_name)
 
+coral = st_read('Data/spatial/coral_reefs_line.gpkg')
+coral = coral |> 
+    st_make_valid() |> 
+    st_intersection(aoi)
+
 mangroves_mainland = st_read('Data/spatial/mangrove_mainland.gpkg') |> mutate(area="Mainland") |> select(area)
 mangroves_pemba = st_read('Data/spatial/mangrove_pemba.gpkg') |> mutate(area="Pemba") |> select(area)
 
@@ -75,12 +80,42 @@ mangroves = mangroves |>
     st_make_valid() |> 
     st_intersection(aoi)
 
+
+depth_contour = st_read('Data/spatial/depth_contour.gpkg')
+
+depth_iso200 = depth_contour |> 
+    filter(depth == -100)
+
+
+miamba_fungu = st_read('Data/spatial/island_miamba_fungu.gpkg') |> 
+    st_make_valid() |> 
+    janitor::clean_names()
+
+miamba_fungu = miamba_fungu |> filter(!type == 'Submerged')|> 
+    mutate(area_m = st_area(geom),
+           area_km = as.numeric(area_m) / 1e6,
+           area_ha = area_km * 100        
+    ) |> 
+    st_transform(4326)
+
+fungu_core = miamba_fungu |> 
+    filter(zone == 'Core') |> 
+    select(name)
+
+# zone_fungu = fungu_core |> 
+#     st_transform(32737) |> 
+#     st_buffer(dist = c(2000)) |> 
+#     st_union() |> 
+#     st_sf() |> 
+#     st_transform(4326) 
+
 ```
 
 
 ```{r}
 islands_aoi = islands_aoi |> 
     select(name = NAME) |> 
+    rbind(fungu_core) |> 
     mutate(area_m = st_area(geom),
            area_km = as.numeric(area_m) / 1e6,
            area_ha = area_km * 100        
@@ -111,7 +146,7 @@ tape = leaflet() |>
                 fill = TRUE, color = 'black',
                 weight = 1, fillOpacity = .1, opacity = 1, label = ~name,
             )|>
-    addPolygons(data = mangroves, group = 'Mangrove',
+    addPolygons(data = mangroves, group = 'Mikoko',
                 fill = TRUE, color = 'transparent', fillColor = 'darkgreen',
                 weight = 0, fillOpacity = .6, opacity = 1
             ) |>
@@ -162,6 +197,12 @@ tape = leaflet() |>
                 fillColor = 'yellow', color = 'orange',
                 weight = 2, fillOpacity = 0.5, opacity = 1
             ) |>
+    addPolygons(data = miamba_fungu, group = 'Other Islands',
+                fillColor = 'purple', color = 'purple',
+                weight = 2, fillOpacity = 0.5, opacity = 1
+            )|>
+    addPolylines(data = coral, group = 'Matumbawe', stroke = TRUE, weight = 2, color = 'orange', opacity = 1) |>
+    addPolylines(data = depth_iso200, group = '200 meter', stroke = TRUE, weight = 2, color = 'black', opacity = 1) |>
     # addLayersControl(
     #     baseGroups = c("OpenStreetMap", "ESRI Imagery", "Ocean Basemap", "Topographic"),
     #     # overlayGroups = c('Eneo Msingi', 'Eneo Kinga', 'Eneo Mpito', 'Hifadhi Hai', 'MPA/MCA', 'Drawn Items', 'Graticule'),
@@ -170,11 +211,11 @@ tape = leaflet() |>
     # ) |>
     addLayersControl(
         baseGroups = c("OpenStreetMap", "ESRI Imagery", "Ocean Basemap", "Topographic"),
-        overlayGroups = c('Eneo Msingi', 'Eneo Kinga', 'Eneo Mpito', 'Hifadhi Hai','Shehia', 'Mangrove', 'MPA/MCA', 'Drawn Items', 'Graticule'),
+        overlayGroups = c('Eneo Msingi', 'Eneo Kinga', 'Eneo Mpito', 'Hifadhi Hai','Shehia','Other Islands','Matumbawe', 'Mikoko', 'MPA/MCA','200 meter', 'Drawn Items', 'Graticule'),
         position = "topright",
         options = layersControlOptions(collapsed = FALSE)
     ) |>  
-        hideGroup(group = c('Shehia', 'Hifadhi Hai', 'Mangrove', 'MPA/MCA', 'Drawn Items', 'Graticule'))|>
+        hideGroup(group = c('Shehia','Other Islands', 'Hifadhi Hai','Matumbawe', 'Mikoko', 'MPA/MCA','200 meter', 'Drawn Items', 'Graticule'))|>
     # Legend for the filled polygons
     addLegend(
         position = "bottomright",
@@ -220,8 +261,8 @@ tape = leaflet() |>
 
 
 tape
-# tape |> 
-#     htmlwidgets::saveWidget(file = 'index.html')
+tape |> 
+    htmlwidgets::saveWidget(file = 'index.html')
 
 
 ``` 
